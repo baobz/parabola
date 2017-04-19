@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title></title>
+		<style>
+			.boll {
+				width: 50px;
+				height: 50px;
+				background-color: #7FFFD4;
+				position: absolute;
+				top: 380px;
+				left: 100px;
+				border-radius: 50px;
+			}
+			
+			.target {
+				width: 50px;
+				height: 50px;
+				background-color: aqua;
+				position: absolute;
+				top: 180px;
+				left: 600px;
+				border-radius: 50px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="btns">
+			<a href="#" id="reset">reset</a>
+			<a href="#" id="run">run</a>
+			<a href="#" id="stop">stop</a>
+			<a href="#" id="setOptions">setOptions</a>
+		</div>
+		<div id="boll" class="boll"></div>
+		<div id="target" class="target"></div>
+		
+		<script src="js/jquery.js"></script>
+		<script>
+			/**
+			 * 
+			 * 
+			 * 
+			 */
+			
+			(function () {
+				//
+		    var _$ = function (_this) {
+		      return _this.constructor == jQuery ? _this : $(_this);
+		    };
+				//+new Date() 小球不会无限运动下去
+		    function now() {
+		      return +new Date();
+		    }
+				//转化为整数
+		    function toInteger(text) {
+	        text = parseInt(text);
+	        return isFinite(text) ? text : 0;
+		    }
+				
+		    var Parabola = function (options) {
+		      this.initialize(options);
+		    };
+		    
+			  Parabola.prototype = {
+			    constructor: Parabola,
+			    
+			    //初始化
+			    initialize: function (options) {
+            this.options = this.options || this.getOptions(options);
+            var ops = this.options;
+            if (!this.options.el) {
+            	return;
+            }
+            
+            this.$el = _$(ops.el);
+            this.timerId = null;
+            this.elOriginalLeft = toInteger(this.$el.css("left"));
+            this.elOriginalTop = toInteger(this.$el.css("top"));
+
+            if (ops.targetEl) {
+                this.driftX = toInteger(_$(ops.targetEl).css("left")) - this.elOriginalLeft;
+                this.driftY = toInteger(_$(ops.targetEl).css("top")) - this.elOriginalTop;
+            } else {
+                this.driftX = ops.offset[0];
+                this.driftY = ops.offset[1];
+            }
+            this.duration = ops.duration;
+            this.curvature = ops.curvature;
+            
+            this.b = ( this.driftY - this.curvature * this.driftX * this.driftX ) / this.driftX;
+
+            if (ops.autostart) {
+                this.start();
+            }
+			    },
+			    
+			    
+			    //获取options
+	        getOptions: function (options) {
+            if (typeof options !== "object") {
+                options = {};
+            }
+            //defaultSetting 
+            options = $.extend({}, defaultSetting, _$(options.el).data(), (this.options || {}), options);
+            return options;
+	        },
+			        
+	        domove: function (x, y) {
+	
+            this.$el.css({
+              position: "absolute",
+              left: this.elOriginalLeft + x,
+              top: this.elOriginalTop + y
+            });
+	
+	          return this;
+	        },
+			        
+	        step: function (now) {
+            var ops = this.options;
+            var x, y;
+            if (now > this.end) {
+              x = this.driftX;
+              y = this.driftY;
+              this.domove(x, y);
+              this.stop();
+              if (typeof ops.callback === 'function') {
+                ops.callback.call(this);
+              }
+            } else {
+              x = this.driftX * ((now - this.begin) / this.duration);
+              y = this.curvature * x * x + this.b * x;
+
+              this.domove(x, y);
+              if (typeof ops.stepCallback === 'function') {
+                ops.stepCallback.call(this,x,y);
+              }
+            }
+            return this;
+	        },
+			        
+	        setOptions: function (options) {
+            this.reset();
+            if (typeof options !== "object") {
+                options = {};
+            }
+            this.options = $.extend(this.options,options);
+            this.initialize(this.options);
+            return this;
+	        },
+			        
+	        start: function () {
+            var self = this;
+            this.begin = now();
+            this.end = this.begin + this.duration;
+            if (this.driftX === 0 && this.driftY === 0) {
+              return;
+            }
+            /*timers.push(this);
+             Timer.start();*/
+            if (!!this.timerId) {
+              clearInterval(this.timerId);
+              this.stop();
+            }
+            this.timerId = setInterval(function () {
+            var t = now();
+            self.step(t);
+
+            }, 13);
+            return this;
+	        },
+			        
+	        reset: function (x, y) {
+            this.stop();
+            x = x ? x : 0;
+            y = y ? y : 0;
+            this.domove(x, y);
+            return this;
+	        },
+			        
+	        stop: function () {
+            if (!!this.timerId) {
+              clearInterval(this.timerId);
+
+            }
+            return this;
+	        }
+			   };
+			   //一开始默认的设置
+		    var defaultSetting = {
+	        el: null, //元素
+	        offset: [0, 0], //位置absolute的位置
+	        targetEl: null, //目标
+	        duration: 500, //持续时间
+	        curvature: 0.001, //抛物线曲度,越大越曲
+	        callback: null, //
+	        autostart: false, //自动开始
+	        stepCallback: null //
+		    };
+		    window.Parabola = Parabola; 
+			})();
+			
+			
+			
+			
+			var bool = new Parabola({
+				el: "#boll",
+				offset: [500, 100],
+				//抛物线曲率
+				curvature: 0.005,
+				//运动持续时间
+				duration: 1000,
+				callback: function() {
+					console.log("完成回调")
+				},
+				stepCallback: function(x, y) {
+					console.log(x, y);
+					//添加运动点
+					$("<div>").appendTo("body").css({
+						"position":"absolute",
+						"top": this.elOriginalTop + y,
+						"left": this.elOriginalLeft + x,
+						"background-color":"#CDCDCD",
+						"width":"5px",
+						"height":"5px",
+						"border-radius":"5px"
+					});
+				}
+			});
+			
+			$('#reset').click(function(event) {
+				event.preventDefault();
+				bool.reset();
+			});
+			$('#run').click(function(event) {
+				event.preventDefault();
+				bool.start();
+			});
+			$('#stop').click(function(event) {
+				event.preventDefault();
+				bool.stop();
+			});
+			$('#setOptions').click(function(event) {
+				event.preventDefault();
+				bool.setOptions({
+					targetEl: $('#target'),
+					curvature: 0.001,
+					duration: 300
+				});
+			});
+		</script>
+	</body>
+</html>

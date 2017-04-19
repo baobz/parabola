@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		
+		<style>
+			input:not(:focus) + .callout {
+				transform: scale(0);
+			}
+			
+			.callout {
+				transition: .5s transform;
+				transform-origin: 1.4em -.4em;
+			}
+			
+			@keyframes elastic-grow {
+				
+			}
+		</style>
+	</head>
+	<body>
+		<label>
+			Your: <input type="text" id="username" />
+			<span class="callout">Only letters, numbers</span>
+		</label>
+	</body>
+</html>
